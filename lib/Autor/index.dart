@@ -1,3 +1,5 @@
+// ignore_for_file: unnecessary_null_comparison
+
 import 'package:appmovilfinal/Autor/edit.dart';
 import 'package:appmovilfinal/main.dart';
 import 'package:flutter/material.dart';
@@ -16,7 +18,7 @@ class _IndexAutorState extends State<IndexAutor> {
   List<Autor> autores = [];
 
   Future<void> getData() async {
-    final url = Uri.parse("http://192.168.0.4:5000/obtener_autores");
+    final url = Uri.parse("http://127.0.0.1:5000/obtener_autores");
 
     try {
       final response = await http.get(url);
@@ -42,6 +44,51 @@ class _IndexAutorState extends State<IndexAutor> {
     }
   }
 
+  Future<void> confirmarYEliminarArticulo(int idAutor) async {
+    bool confirmado = await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Confirmar eliminación'),
+          content: Text('¿Está seguro de que desea eliminar este autor?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(false);
+              },
+              child: Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(true);
+              },
+              child: Text('Eliminar'),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmado == true) {
+      eliminarAutor(idAutor);
+    }
+  }
+
+  Future<void> eliminarAutor(int idAutor) async {
+    final url = Uri.parse("http://127.0.0.1:5000/eliminar_autor/$idAutor");
+
+    try {
+      final response = await http.put(url);
+
+      if (response.statusCode == 200) {
+        getData();
+      } else {
+        print("Error al eliminar el artículo: ${response.statusCode}");
+      }
+    } catch (e) {
+      print("Error: $e");
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -52,6 +99,7 @@ class _IndexAutorState extends State<IndexAutor> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.teal[300],
         title: Row(
           children: [
             Text('Listado de Autores'),
@@ -83,6 +131,8 @@ class _IndexAutorState extends State<IndexAutor> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ElevatedButton(
+              style: ButtonStyle(
+                  backgroundColor: MaterialStatePropertyAll(Colors.teal[300])),
               onPressed: () {
                 Navigator.push(
                   context,
@@ -121,9 +171,22 @@ class _IndexAutorState extends State<IndexAutor> {
                               ),
                             );
                           },
-                          icon: Icon(Icons.edit),
+                          icon: Icon(
+                            Icons.edit,
+                            color: Colors.amber,
+                          ),
                         ),
-                        IconButton(onPressed: () {}, icon: Icon(Icons.delete))
+                        IconButton(
+                            onPressed: () {
+                              final idArticulo = autores[index].idAutor;
+                              if (idArticulo != null) {
+                                confirmarYEliminarArticulo(idArticulo);
+                              }
+                            },
+                            icon: Icon(
+                              Icons.delete,
+                              color: Colors.red,
+                            ))
                       ],
                     ),
                   );

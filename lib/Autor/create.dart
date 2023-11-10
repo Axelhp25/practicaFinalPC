@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:appmovilfinal/Models/Institucion.dart';
+import 'package:intl/intl.dart';
 
 class CreateAutor extends StatefulWidget {
   @override
@@ -11,12 +12,13 @@ class CreateAutor extends StatefulWidget {
 }
 
 class _CreateAutorState extends State<CreateAutor> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController nombreController = TextEditingController();
   final TextEditingController apellidoController = TextEditingController();
   final TextEditingController direccionController = TextEditingController();
-  int? selectedInstitucionId; // Cambiado a tipo nullable
-  bool activo = false;
-  // Una lista para almacenar las instituciones disponibles
+
+  int? selectedInstitucionId;
+  bool activo = true;
   List<Institucion> instituciones = [];
   String mensaje = "Conexión: Cargando...";
 
@@ -27,7 +29,7 @@ class _CreateAutorState extends State<CreateAutor> {
   }
 
   Future<void> obtenerInstituciones() async {
-    final url = Uri.parse("http://192.168.0.4:5000/obtener_instituciones");
+    final url = Uri.parse("http://127.0.0.1:5000/obtener_instituciones");
 
     try {
       final response = await http.get(url);
@@ -52,32 +54,34 @@ class _CreateAutorState extends State<CreateAutor> {
   }
 
   Future<void> guardarAutor() async {
-    var uri = Uri.http('192.168.0.4:5000', '/crear_autor'); // Construye la URI
+    if (_formKey.currentState!.validate()) {
+      var uri = Uri.http('127.0.0.1:5000', '/crear_autor');
 
-    final autorData = {
-      "nombre": nombreController.text,
-      "apellido": apellidoController.text,
-      "direccion": direccionController.text,
-      "idInstitucion": selectedInstitucionId,
-      "activo": activo,
-    };
+      final autorData = {
+        "nombre": nombreController.text,
+        "apellido": apellidoController.text,
+        "direccion": direccionController.text,
+        "idInstitucion": selectedInstitucionId,
+        "activo": activo,
+      };
 
-    final response = await http.post(
-      uri, // Utiliza la URI construida
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode(autorData),
-    );
-
-    if (response.statusCode == 200) {
-      final responseData = json.decode(response.body);
-      final mensaje = responseData['mensaje'];
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => IndexAutor()),
+      final response = await http.post(
+        uri,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(autorData),
       );
-      print(mensaje);
-    } else {
-      print("Error: ${response.statusCode}");
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        final mensaje = responseData['mensaje'];
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => IndexAutor()),
+        );
+        print(mensaje);
+      } else {
+        print("Error: ${response.statusCode}");
+      }
     }
   }
 
@@ -85,6 +89,7 @@ class _CreateAutorState extends State<CreateAutor> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.teal[300],
         title: Row(
           children: [
             Text('Crear Autor'),
@@ -112,56 +117,112 @@ class _CreateAutorState extends State<CreateAutor> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Nombre'),
-            TextFormField(
-              controller: nombreController,
-            ),
-            Text('Apellido'),
-            TextFormField(
-              controller: apellidoController,
-            ),
-            Text('Dirección'),
-            TextFormField(
-              controller: direccionController,
-            ),
-            Text('Institución'),
-            DropdownButton<int>(
-              isExpanded: true,
-              value: selectedInstitucionId,
-              items: instituciones.map((institucion) {
-                return DropdownMenuItem<int>(
-                  value: institucion.idInstitucion,
-                  child: Text(institucion.nombre),
-                );
-              }).toList(),
-              onChanged: (int? newValue) {
-                setState(() {
-                  selectedInstitucionId = newValue;
-                });
-              },
-            ),
-            CheckboxListTile(
-              title: Text('Activo'),
-              value: activo,
-              onChanged: (value) {
-                setState(() {
-                  activo = value!;
-                });
-              },
-            ),
-            Padding(
-              padding: const EdgeInsets.all(10.0),
-              child: ElevatedButton(
-                onPressed: () {
-                  guardarAutor(); // Llama a la función para guardar el autor
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextFormField(
+                decoration: InputDecoration(
+                  labelText: "Nombre",
+                  border: OutlineInputBorder(),
+                ),
+                controller: nombreController,
+                maxLength: 40,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'El nombre es requerido';
+                  }
+                  return null;
                 },
-                child: Text('Guardar'),
               ),
-            ),
-          ],
+              SizedBox(
+                height: 15,
+              ),
+              TextFormField(
+                decoration: InputDecoration(
+                  labelText: "Apellido",
+                  border: OutlineInputBorder(),
+                ),
+                controller: apellidoController,
+                maxLength: 40,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'El apellido es requerido';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(
+                height: 15,
+              ),
+              TextFormField(
+                decoration: InputDecoration(
+                  labelText: "Dirección",
+                  border: OutlineInputBorder(),
+                ),
+                controller: direccionController,
+                maxLength: 40,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'La dirección es requerida';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(
+                height: 10,
+              ),
+              Text('Institución'),
+              DropdownButton<int>(
+                isExpanded: true,
+                value: selectedInstitucionId,
+                items: instituciones.map((institucion) {
+                  return DropdownMenuItem<int>(
+                    value: institucion.idInstitucion,
+                    child: Text(institucion.nombre),
+                  );
+                }).toList(),
+                onChanged: (int? newValue) {
+                  setState(() {
+                    selectedInstitucionId = newValue;
+                  });
+                },
+              ),
+              SizedBox(
+                height: 15,
+              ),
+              CheckboxListTile(
+                title: Text('Activo'),
+                value: activo,
+                onChanged: (value) {
+                  setState(() {
+                    activo = value!;
+                  });
+                },
+              ),
+              Padding(
+                padding: const EdgeInsets.all(15.0),
+                child: ElevatedButton(
+                  style: ButtonStyle(
+                      backgroundColor: MaterialStatePropertyAll(Colors.green)),
+                  onPressed: () {
+                    guardarAutor();
+                  },
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text('Guardar'),
+                      SizedBox(
+                        width: 5,
+                      ),
+                      Icon(Icons.create)
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

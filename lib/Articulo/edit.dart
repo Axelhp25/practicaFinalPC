@@ -14,6 +14,7 @@ class EditArticulo extends StatefulWidget {
 }
 
 class _EditArticuloState extends State<EditArticulo> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController tituloController = TextEditingController();
   final TextEditingController resumenController = TextEditingController();
   final TextEditingController contenidoController = TextEditingController();
@@ -27,7 +28,7 @@ class _EditArticuloState extends State<EditArticulo> {
 
   Future<void> obtenerDetallesArticulo() async {
     final url = Uri.parse(
-        "http://192.168.0.4:5000/obtener_articulo/${widget.idArticulo}");
+        "http://127.0.0.1:5000/obtener_articulo/${widget.idArticulo}");
 
     try {
       final response = await http.get(url);
@@ -50,33 +51,34 @@ class _EditArticuloState extends State<EditArticulo> {
   }
 
   Future<void> guardarCambios() async {
-    final url = Uri.parse(
-        "http://192.168.0.4:5000/actualizar_articulo/${widget.idArticulo}");
+    if (_formKey.currentState!.validate()) {
+      final url = Uri.parse(
+          "http://127.0.0.1:5000/actualizar_articulo/${widget.idArticulo}");
 
-    final articuloData = {
-      "titulo": tituloController.text,
-      "resumen": resumenController.text,
-      "contenido": contenidoController.text,
-      "activo": activo,
-    };
-
-    final response = await http.put(
-      url,
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode(articuloData),
-    );
-
-    if (response.statusCode == 200) {
-      final responseData = json.decode(response.body);
-      final mensaje = responseData['mensaje'];
-      print(mensaje);
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => IndexArticulo()),
+      final articuloData = {
+        "titulo": tituloController.text,
+        "resumen": resumenController.text,
+        "contenido": contenidoController.text,
+        "activo": activo,
+      };
+      final response = await http.put(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(articuloData),
       );
-    } else {
-      print("Error al guardar cambios del artículo: ${response.statusCode}");
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        final mensaje = responseData['mensaje'];
+        print(mensaje);
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => IndexArticulo()),
+        );
+      } else {
+        print("Error al guardar cambios del artículo: ${response.statusCode}");
+      }
     }
   }
 
@@ -84,6 +86,7 @@ class _EditArticuloState extends State<EditArticulo> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.teal[300],
         title: Row(
           children: [
             Text('Editar Artículo'),
@@ -111,40 +114,89 @@ class _EditArticuloState extends State<EditArticulo> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Título'),
-            TextFormField(
-              controller: tituloController,
-            ),
-            Text('Resumen'),
-            TextFormField(
-              controller: resumenController,
-            ),
-            Text('Contenido'),
-            TextFormField(
-              controller: contenidoController,
-            ),
-            CheckboxListTile(
-              title: Text('Activo'),
-              value: activo,
-              onChanged: (value) {
-                setState(() {
-                  activo = value!;
-                });
-              },
-            ),
-            Padding(
-              padding: const EdgeInsets.all(10.0),
-              child: ElevatedButton(
-                onPressed: () {
-                  guardarCambios();
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextFormField(
+                decoration: InputDecoration(
+                  labelText: "Titulo",
+                  border: OutlineInputBorder(),
+                ),
+                controller: tituloController,
+                maxLength: 45,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Este campo es requerido';
+                  }
+                  return null;
                 },
-                child: Text('Guardar'),
               ),
-            ),
-          ],
+              TextFormField(
+                decoration: InputDecoration(
+                  labelText: "Resumen",
+                  border: OutlineInputBorder(),
+                ),
+                controller: resumenController,
+                maxLength: 95,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Este campo es requerido';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(
+                height: 15,
+              ),
+              TextFormField(
+                maxLines: 2,
+                decoration: InputDecoration(
+                  labelText: "Contenido",
+                  border: OutlineInputBorder(),
+                ),
+                controller: contenidoController,
+                maxLength: 195,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Este campo es requerido';
+                  }
+                  return null;
+                },
+              ),
+              CheckboxListTile(
+                title: Text('Activo'),
+                value: activo,
+                onChanged: (value) {
+                  setState(() {
+                    activo = value!;
+                  });
+                },
+              ),
+              Padding(
+                padding: const EdgeInsets.all(10.0),
+                child: ElevatedButton(
+                  style: ButtonStyle(
+                      backgroundColor:
+                          MaterialStateProperty.all<Color>(Colors.amber)),
+                  onPressed: () {
+                    guardarCambios();
+                  },
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text('Guardar'),
+                      SizedBox(
+                        width: 5,
+                      ),
+                      Icon(Icons.edit)
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

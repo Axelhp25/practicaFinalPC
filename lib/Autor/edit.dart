@@ -14,25 +14,26 @@ class EditAutor extends StatefulWidget {
 }
 
 class _EditAutorState extends State<EditAutor> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController nombreController = TextEditingController();
   final TextEditingController apellidoController = TextEditingController();
   final TextEditingController direccionController = TextEditingController();
   int? selectedInstitucionId;
   List<Institucion> instituciones = [];
   bool activo = false;
+
   @override
   void initState() {
     super.initState();
     obtenerInstituciones();
 
-    // Si se proporciona un idAutor, carga los datos del autor
     if (widget.idAutor != null) {
       cargarDatosAutor(widget.idAutor!);
     }
   }
 
   Future<void> obtenerInstituciones() async {
-    final url = Uri.parse("http://192.168.0.4:5000/obtener_instituciones");
+    final url = Uri.parse("http://127.0.0.1:5000/obtener_instituciones");
 
     try {
       final response = await http.get(url);
@@ -53,15 +54,13 @@ class _EditAutorState extends State<EditAutor> {
   }
 
   Future<void> cargarDatosAutor(int idAutor) async {
-    final url = Uri.parse("http://192.168.0.4:5000/obtener_autor/$idAutor");
+    final url = Uri.parse("http://127.0.0.1:5000/obtener_autor/$idAutor");
 
     try {
       final response = await http.get(url);
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
-
-        // Comprobar si la respuesta contiene la estructura esperada
         if (jsonData.containsKey("nombre") &&
             jsonData.containsKey("apellido") &&
             jsonData.containsKey("direccion") &&
@@ -81,30 +80,32 @@ class _EditAutorState extends State<EditAutor> {
   }
 
   Future<void> guardarAutor() async {
-    var uri =
-        Uri.http('192.168.0.4:5000', '/actualizar_autor/${widget.idAutor}');
+    if (_formKey.currentState!.validate()) {
+      var uri =
+          Uri.http('127.0.0.1:5000', '/actualizar_autor/${widget.idAutor}');
 
-    final autorData = {
-      "nombre": nombreController.text,
-      "apellido": apellidoController.text,
-      "direccion": direccionController.text,
-      "idInstitucion": selectedInstitucionId,
-      "activo": activo,
-    };
+      final autorData = {
+        "nombre": nombreController.text,
+        "apellido": apellidoController.text,
+        "direccion": direccionController.text,
+        "idInstitucion": selectedInstitucionId,
+        "activo": activo,
+      };
 
-    final response = await http.put(
-      uri,
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode(autorData),
-    );
+      final response = await http.put(
+        uri,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(autorData),
+      );
 
-    if (response.statusCode == 200) {
-      final responseData = json.decode(response.body);
-      final mensaje = responseData['mensaje'];
-      Navigator.pop(context); // Regresar a la página anterior
-      print(mensaje);
-    } else {
-      print("Error: ${response.statusCode}");
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        final mensaje = responseData['mensaje'];
+        Navigator.pop(context);
+        print(mensaje);
+      } else {
+        print("Error: ${response.statusCode}");
+      }
     }
   }
 
@@ -112,6 +113,7 @@ class _EditAutorState extends State<EditAutor> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.teal[300],
         title: Row(
           children: [
             Text('Editar Autor'),
@@ -139,58 +141,106 @@ class _EditAutorState extends State<EditAutor> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Nombre'),
-            TextFormField(
-              controller: nombreController,
-            ),
-            Text('Apellido'),
-            TextFormField(
-              controller: apellidoController,
-            ),
-            Text('Dirección'),
-            TextFormField(
-              controller: direccionController,
-            ),
-
-            Text('Institución'),
-            DropdownButton<int>(
-              isExpanded: true,
-              value: selectedInstitucionId,
-              items: instituciones.map((institucion) {
-                return DropdownMenuItem<int>(
-                  value: institucion.idInstitucion,
-                  child: Text(institucion.nombre),
-                );
-              }).toList(),
-              onChanged: (int? newValue) {
-                setState(() {
-                  selectedInstitucionId = newValue;
-                });
-              },
-            ),
-            CheckboxListTile(
-              title: Text('Activo'),
-              value: activo,
-              onChanged: (value) {
-                setState(() {
-                  activo = value!;
-                });
-              },
-            ),
-            Padding(
-              padding: const EdgeInsets.all(10.0),
-              child: ElevatedButton(
-                onPressed: () {
-                  guardarAutor();
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextFormField(
+                decoration: InputDecoration(
+                  labelText: "Nombre",
+                  border: OutlineInputBorder(),
+                ),
+                controller: nombreController,
+                maxLength: 40,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'El nombre es requerido';
+                  }
+                  return null;
                 },
-                child: Text('Guardar'),
               ),
-            ),
-            // Muestra mensajes de error o éxito
-          ],
+              SizedBox(
+                height: 15,
+              ),
+              TextFormField(
+                decoration: InputDecoration(
+                  labelText: "Apellido",
+                  border: OutlineInputBorder(),
+                ),
+                controller: apellidoController,
+                maxLength: 40,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'El apellido es requerido';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(
+                height: 15,
+              ),
+              TextFormField(
+                decoration: InputDecoration(
+                  labelText: "Dirección",
+                  border: OutlineInputBorder(),
+                ),
+                controller: direccionController,
+                maxLength: 40,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'La dirección es requerida';
+                  }
+                  return null;
+                },
+              ),
+              Text('Institución'),
+              DropdownButton<int>(
+                isExpanded: true,
+                value: selectedInstitucionId,
+                items: instituciones.map((institucion) {
+                  return DropdownMenuItem<int>(
+                    value: institucion.idInstitucion,
+                    child: Text(institucion.nombre),
+                  );
+                }).toList(),
+                onChanged: (int? newValue) {
+                  setState(() {
+                    selectedInstitucionId = newValue;
+                  });
+                },
+              ),
+              CheckboxListTile(
+                title: Text('Activo'),
+                value: activo,
+                onChanged: (value) {
+                  setState(() {
+                    activo = value!;
+                  });
+                },
+              ),
+              Padding(
+                padding: const EdgeInsets.all(10.0),
+                child: ElevatedButton(
+                  style: ButtonStyle(
+                      backgroundColor: MaterialStatePropertyAll(Colors.amber)),
+                  onPressed: () {
+                    guardarAutor();
+                  },
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text('Guardar'),
+                      SizedBox(
+                        width: 5,
+                      ),
+                      Icon(Icons.edit)
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

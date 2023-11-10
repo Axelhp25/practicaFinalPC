@@ -24,7 +24,7 @@ class _EditInstitucionState extends State<EditInstitucion> {
 
   Future<void> obtenerDetallesInstitucion() async {
     final url = Uri.parse(
-        "http://192.168.0.4:5000/obtener_institucion/${widget.idInstitucion}");
+        "http://127.0.0.1:5000/obtener_institucion/${widget.idInstitucion}");
 
     try {
       final response = await http.get(url);
@@ -46,7 +46,7 @@ class _EditInstitucionState extends State<EditInstitucion> {
 
   Future<void> guardarCambios() async {
     final url = Uri.parse(
-        "http://192.168.0.4:5000/actualizar_institucion/${widget.idInstitucion}");
+        "http://127.0.0.1:5000/actualizar_institucion/${widget.idInstitucion}");
 
     final institucionData = {
       "nombre": nombreController.text,
@@ -74,6 +74,7 @@ class _EditInstitucionState extends State<EditInstitucion> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.teal[300],
         title: Row(
           children: [
             Text('Editar Institución'),
@@ -107,6 +108,7 @@ class _EditInstitucionState extends State<EditInstitucion> {
             Text('Nombre'),
             TextFormField(
               controller: nombreController,
+              maxLength: 40,
             ),
             CheckboxListTile(
               title: Text('Activa'),

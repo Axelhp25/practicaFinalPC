@@ -11,10 +11,10 @@ class CreateInstitucion extends StatefulWidget {
 
 class _CreateInstitucionState extends State<CreateInstitucion> {
   final TextEditingController nombreController = TextEditingController();
-  bool activa = false;
+  bool activa = true;
 
   Future<void> guardarInstitucion() async {
-    final url = Uri.parse("http://192.168.0.4:5000/crear_institucion");
+    final url = Uri.parse("http://127.0.0.1:5000/crear_institucion");
 
     final institucionData = {
       "nombre": nombreController.text,
@@ -44,6 +44,7 @@ class _CreateInstitucionState extends State<CreateInstitucion> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.teal[300],
         title: Row(
           children: [
             Text('Crear Institución'),
@@ -77,6 +78,7 @@ class _CreateInstitucionState extends State<CreateInstitucion> {
             Text('Nombre'),
             TextFormField(
               controller: nombreController,
+              maxLength: 40,
             ),
             CheckboxListTile(
               title: Text('Activo'),

@@ -15,7 +15,7 @@ class _IndexArticuloState extends State<IndexArticulo> {
   List<Map<String, dynamic>> articulos = [];
 
   Future<void> getData() async {
-    final url = Uri.parse("http://192.168.0.4:5000/obtener_articulos");
+    final url = Uri.parse("http://127.0.0.1:5000/obtener_articulos");
     try {
       final response = await http.get(url);
 
@@ -32,6 +32,52 @@ class _IndexArticuloState extends State<IndexArticulo> {
     }
   }
 
+  Future<void> confirmarYEliminarArticulo(int idArticulo) async {
+    bool confirmado = await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Confirmar eliminación'),
+          content: Text('¿Está seguro de que desea eliminar este artículo?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(false);
+              },
+              child: Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(true);
+              },
+              child: Text('Eliminar'),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmado == true) {
+      eliminarArticulo(idArticulo);
+    }
+  }
+
+  Future<void> eliminarArticulo(int idArticulo) async {
+    final url =
+        Uri.parse("http://127.0.0.1:5000/eliminar_articulo/$idArticulo");
+
+    try {
+      final response = await http.put(url);
+
+      if (response.statusCode == 200) {
+        getData();
+      } else {
+        print("Error al eliminar el artículo: ${response.statusCode}");
+      }
+    } catch (e) {
+      print("Error: $e");
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -42,6 +88,7 @@ class _IndexArticuloState extends State<IndexArticulo> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.teal[300],
         title: Row(
           children: [
             Text('Articulos'),
@@ -73,6 +120,8 @@ class _IndexArticuloState extends State<IndexArticulo> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ElevatedButton(
+              style: ButtonStyle(
+                  backgroundColor: MaterialStatePropertyAll(Colors.teal[300])),
               onPressed: () {
                 Navigator.push(
                   context,
@@ -113,9 +162,24 @@ class _IndexArticuloState extends State<IndexArticulo> {
                               );
                             }
                           },
-                          icon: Icon(Icons.edit),
+                          icon: Icon(
+                            Icons.edit,
+                            color: Colors.amber,
+                          ),
                         ),
-                        IconButton(onPressed: () {}, icon: Icon(Icons.delete))
+                        IconButton(
+                            onPressed: () {
+                              {
+                                final idArticulo = articulos[index]["id"];
+                                if (idArticulo != null) {
+                                  confirmarYEliminarArticulo(idArticulo);
+                                }
+                              }
+                            },
+                            icon: Icon(
+                              Icons.delete,
+                              color: Colors.red,
+                            ))
                       ],
                     ),
                   );
