@@ -1,8 +1,6 @@
+import 'package:appmovilfinal/Articulo/create.dart';
 import 'package:appmovilfinal/Articulo/index.dart';
-import 'package:appmovilfinal/Autor/index.dart';
-import 'package:appmovilfinal/Autorarticulo/create.dart';
-import 'package:appmovilfinal/Autorarticulo/edit.dart';
-import 'package:appmovilfinal/Institucion/index.dart';
+import 'package:appmovilfinal/Autorarticulo/reportes.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -33,12 +31,12 @@ class HomeScreen extends StatelessWidget {
             'titulo': item['titulo_articulo'] ?? '',
             'autor': item['nombre_autor'] ?? '',
             'resumen': item['resumen_articulo'] ?? '',
-            'idAutor': item['idAutor'], // Agrega el ID del autor
-            'idArticulo': item['idArticulo'], // Agrega el ID del artículo
+            'idAutor': item['idAutor'],
+            'idArticulo': item['idArticulo'],
+            'fecha': item['fecha_articulo'] ?? '',
           };
         }),
       );
-      print(articulos);
       return articulos;
     } else {
       throw Exception('Error al cargar datos desde la API');
@@ -62,7 +60,9 @@ class HomeScreen extends StatelessWidget {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => IndexArticulo()),
+                    MaterialPageRoute(
+                      builder: (context) => CreateArticulos(),
+                    ),
                   );
                 },
                 child: Text(
@@ -79,69 +79,16 @@ class HomeScreen extends StatelessWidget {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => IndexAutor()),
-                  );
-                },
-                child: Text(
-                  'Autores',
-                  style: TextStyle(fontSize: 18),
-                ),
-              ),
-              TextButton(
-                style: ButtonStyle(
-                  foregroundColor: MaterialStateProperty.all<Color>(
-                    const Color.fromARGB(255, 255, 255, 255),
-                  ),
-                ),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => IndexInstitucion()),
-                  );
-                },
-                child: Text(
-                  'Instituciones',
-                  style: TextStyle(fontSize: 18),
-                ),
-              ),
-              TextButton(
-                style: ButtonStyle(
-                  foregroundColor: MaterialStateProperty.all<Color>(
-                    const Color.fromARGB(255, 255, 255, 255),
-                  ),
-                ),
-                onPressed: () {
-                  Navigator.push(
-                    context,
                     MaterialPageRoute(
-                      builder: (context) => CreateAutorArticulo(),
+                      builder: (context) => ReporteAutorArticulo(),
                     ),
                   );
                 },
                 child: Text(
-                  'Asignar Articulos',
+                  'Reportes',
                   style: TextStyle(fontSize: 18),
                 ),
               ),
-              TextButton(
-                style: ButtonStyle(
-                  foregroundColor: MaterialStateProperty.all<Color>(
-                    const Color.fromARGB(255, 255, 255, 255),
-                  ),
-                ),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => CreateAutorArticulo(),
-                    ),
-                  );
-                },
-                child: Text(
-                  'Reportes por fechas',
-                  style: TextStyle(fontSize: 18),
-                ),
-              )
             ],
           ),
         ),
@@ -162,7 +109,7 @@ class HomeScreen extends StatelessWidget {
                 maxCrossAxisExtent: 300,
                 crossAxisSpacing: 2,
                 mainAxisSpacing: 2,
-                childAspectRatio: 0.88,
+                childAspectRatio: 1,
               ),
               itemCount: snapshot.data!.length,
               itemBuilder: (context, index) {
@@ -173,12 +120,11 @@ class HomeScreen extends StatelessWidget {
                     scrollDirection: Axis.vertical,
                     child: ArticuloCard(
                       titulo: articulo['titulo'] ?? '',
+                      fecha: articulo['fecha'],
                       autor: articulo['autor'] ?? '',
                       resumen: articulo['resumen'] ?? '',
-                      idAutor:
-                          articulo['idAutor'] ?? 0, // Agrega el ID del autor
-                      idArticulo: articulo['idArticulo'] ??
-                          0, // Agrega el ID del artículo
+                      idAutor: articulo['idAutor'] ?? 0,
+                      idArticulo: articulo['idArticulo'] ?? 0,
                     ),
                   ),
                 );
@@ -195,15 +141,17 @@ class ArticuloCard extends StatelessWidget {
   final String titulo;
   final String autor;
   final String resumen;
-  final int idAutor; // Agrega el ID del autor
-  final int idArticulo; // Agrega el ID del artículo
+  final String fecha;
+  final int idAutor;
+  final int idArticulo;
 
   ArticuloCard({
     required this.titulo,
     required this.autor,
     required this.resumen,
-    required this.idAutor, // Añade el ID del autor a los parámetros
-    required this.idArticulo, // Añade el ID del artículo a los parámetros
+    required this.fecha,
+    required this.idAutor,
+    required this.idArticulo,
   });
 
   @override
@@ -214,18 +162,13 @@ class ArticuloCard extends StatelessWidget {
       child: InkWell(
         splashColor: Colors.blue.withAlpha(30),
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => EditarAutorArticulo(
-                idAutor: idAutor, // Pasa el ID del autor
-                idArticulo: idArticulo, // Pasa el ID del artículo
-              ),
-            ),
-          );
+          // Al hacer clic, no realizamos ninguna acción por ahora
+        },
+        onLongPress: () {
+          _mostrarMenuEliminar(context);
         },
         child: SizedBox(
-          width: 350, // Ancho original de la tarjeta
+          width: 350,
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -250,10 +193,116 @@ class ArticuloCard extends StatelessWidget {
                     fontSize: 16.0,
                   ),
                 ),
+                Text(
+                  'Fecha: ${_formatearFecha(fecha)}',
+                  style: TextStyle(
+                    fontSize: 16.0,
+                  ),
+                ),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  String _formatearFecha(String fecha) {
+    try {
+      // Intenta parsear la fecha como un DateTime
+      DateTime fechaDateTime = DateTime.parse(fecha);
+
+      // Formatea la fecha según el formato deseado
+      return DateFormat('dd/MM/yyyy').format(fechaDateTime);
+    } catch (e) {
+      // Si hay un error al parsear la fecha, simplemente devuelve la cadena original
+      return fecha;
+    }
+  }
+
+  void _mostrarMenuEliminar(BuildContext context) {
+    final RenderBox overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox;
+    showMenu(
+      context: context,
+      position: RelativeRect.fromRect(
+        Rect.fromPoints(
+          overlay.localToGlobal(Offset.zero),
+          overlay.localToGlobal(overlay.size.bottomRight(Offset.zero)),
+        ),
+        Offset.zero & overlay.size,
+      ),
+      items: [
+        PopupMenuItem(
+          value: 'eliminar',
+          child: Text('Eliminar'),
+        ),
+      ],
+    ).then((value) {
+      if (value == 'eliminar') {
+        _mostrarAlertaEliminar(context);
+      }
+    });
+  }
+
+  void _mostrarAlertaEliminar(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Eliminar Artículo'),
+          content: Text('¿Está seguro de que desea eliminar este artículo?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () {
+                _eliminarArticulo(idArticulo); // Pasa el idArticulo al método
+                MaterialPageRoute(
+                  builder: (context) => HomePage(),
+                );
+              },
+              child: Text('Eliminar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _eliminarArticulo(int idArticulo) async {
+    final url =
+        Uri.parse("http://127.0.0.1:5000/eliminar_articulo/$idArticulo");
+
+    try {
+      final response = await http.put(url);
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        final mensaje = responseData['mensaje'];
+        print(mensaje);
+      } else {
+        print("Error: ${response.statusCode}");
+      }
+    } catch (e) {
+      print("Error: $e");
+    }
+  }
+}
+
+class CreateArticulo extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Crear Artículo'),
+      ),
+      body: Center(
+        child: Text('Pantalla de Creación de Artículos'),
       ),
     );
   }

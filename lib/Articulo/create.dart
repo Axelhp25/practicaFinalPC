@@ -1,20 +1,23 @@
-import 'package:appmovilfinal/Articulo/index.dart';
-import 'package:appmovilfinal/main.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:appmovilfinal/Articulo/index.dart';
+import 'package:appmovilfinal/main.dart';
 
-class CreateArticulo extends StatefulWidget {
+import '../Models/Autor.dart';
+
+class CreateArticulos extends StatefulWidget {
   @override
-  _CreateArticuloState createState() => _CreateArticuloState();
+  _CreateArticulosState createState() => _CreateArticulosState();
 }
 
-class _CreateArticuloState extends State<CreateArticulo> {
+class _CreateArticulosState extends State<CreateArticulos> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController tituloController = TextEditingController();
   final TextEditingController resumenController = TextEditingController();
   final TextEditingController contenidoController = TextEditingController();
-  bool activo = true;
+  List<Autor> autores = [];
+  List<Autor> selectedAutores = [];
 
   String? validateRequired(String? value) {
     if (value == null || value.isEmpty) {
@@ -23,16 +26,101 @@ class _CreateArticuloState extends State<CreateArticulo> {
     return null;
   }
 
+  @override
+  void initState() {
+    super.initState();
+    obtenerAutores();
+  }
+
+  Future<void> obtenerAutores() async {
+    final url = Uri.parse("http://127.0.0.1:5000/obtener_autores");
+
+    try {
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        setState(() {
+          autores = (jsonData as List).map((item) {
+            return Autor.fromJson(item);
+          }).toList();
+        });
+      } else {
+        print("Error: ${response.statusCode}");
+      }
+    } catch (e) {
+      print("Error: $e");
+    }
+  }
+
+  void toggleAutorSelection(Autor autor) {
+    setState(() {
+      if (selectedAutores.contains(autor)) {
+        selectedAutores.remove(autor);
+      } else {
+        selectedAutores.add(autor);
+      }
+    });
+  }
+
   Future<void> guardarArticulo() async {
     if (_formKey.currentState!.validate()) {
-      var uri = Uri.http('127.0.0.1:5000', '/crear_articulo');
-      final articuloData = {
-        "titulo": tituloController.text,
-        "resumen": resumenController.text,
-        "contenido": contenidoController.text,
-        "activo": activo,
-      };
+      if (selectedAutores.isEmpty) {
+        // Si no se ha seleccionado ningún autor, muestra un AlertDialog y no continúa
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text('Error'),
+              content: Text('Debes seleccionar al menos un autor.'),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text('OK'),
+                ),
+              ],
+            );
+          },
+        );
+        return;
+      }
 
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Confirmar'),
+            content: Text('¿Deseas insertar el artículo?'),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  insertarArticulo();
+                },
+                child: Text('Sí'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text('Cancelar'),
+              ),
+            ],
+          );
+        },
+      );
+    }
+  }
+
+  // Método para insertar el artículo
+  Future<void> insertarArticulo() async {
+    var uri = Uri.http('127.0.0.1:5000', '/crear_articulo');
+    final articuloData = {
+      "titulo": tituloController.text,
+      "resumen": resumenController.text,
+      "contenido": contenidoController.text,
+      "autores": selectedAutores.map((autor) => autor.idAutor).toList(),
+    };
+
+    try {
       final response = await http.post(
         uri,
         headers: {"Content-Type": "application/json"},
@@ -43,13 +131,25 @@ class _CreateArticuloState extends State<CreateArticulo> {
         final responseData = json.decode(response.body);
         final mensaje = responseData['mensaje'];
         print(mensaje);
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => IndexArticulo()),
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Artículo creado con éxito'),
+            backgroundColor: Colors.green,
+          ),
         );
+
+        Future.delayed(Duration(seconds: 2), () {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => HomePage()),
+          );
+        });
       } else {
         print("Error: ${response.statusCode}");
       }
+    } catch (e) {
+      print("Error: $e");
     }
   }
 
@@ -90,22 +190,28 @@ class _CreateArticuloState extends State<CreateArticulo> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              TextFormField(
-                controller: tituloController,
-                maxLength: 45,
-                validator: validateRequired,
-                decoration: InputDecoration(
-                  labelText: "Titulo",
-                  border: OutlineInputBorder(),
+              Padding(
+                padding: const EdgeInsets.only(top: 5.0),
+                child: TextFormField(
+                  controller: tituloController,
+                  maxLength: 45,
+                  validator: validateRequired,
+                  decoration: InputDecoration(
+                    labelText: "Titulo",
+                    border: OutlineInputBorder(),
+                  ),
                 ),
               ),
-              TextFormField(
-                controller: resumenController,
-                maxLength: 95,
-                validator: validateRequired,
-                decoration: InputDecoration(
-                  labelText: "Resumen",
-                  border: OutlineInputBorder(),
+              Padding(
+                padding: const EdgeInsets.only(top: 15.0),
+                child: TextFormField(
+                  controller: resumenController,
+                  maxLength: 95,
+                  validator: validateRequired,
+                  decoration: InputDecoration(
+                    labelText: "Resumen",
+                    border: OutlineInputBorder(),
+                  ),
                 ),
               ),
               SizedBox(
@@ -121,34 +227,46 @@ class _CreateArticuloState extends State<CreateArticulo> {
                   border: OutlineInputBorder(),
                 ),
               ),
-              CheckboxListTile(
-                title: Text('Activo'),
-                value: activo,
-                onChanged: (value) {
-                  setState(() {
-                    activo = value!;
-                  });
-                },
+              SizedBox(
+                height: 15,
               ),
-              Padding(
-                padding: const EdgeInsets.all(10.0),
-                child: ElevatedButton(
-                  style: ButtonStyle(
-                      backgroundColor:
-                          MaterialStateProperty.all<Color>(Colors.green)),
-                  onPressed: () {
-                    guardarArticulo();
+              Text('Autores'),
+              Container(
+                height: 200,
+                child: ListView.builder(
+                  itemCount: autores.length,
+                  itemBuilder: (context, index) {
+                    final autor = autores[index];
+                    return CheckboxListTile(
+                      title: Text(autor.nombre),
+                      value: selectedAutores.contains(autor),
+                      onChanged: (value) {
+                        toggleAutorSelection(autor);
+                      },
+                    );
                   },
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text('Guardar'),
-                      SizedBox(
-                        width: 10,
-                      ),
-                      Icon(Icons.create)
-                    ],
-                  ),
+                ),
+              ),
+              SizedBox(
+                height: 15,
+              ),
+              ElevatedButton(
+                style: ButtonStyle(
+                  backgroundColor:
+                      MaterialStateProperty.all<Color>(Colors.green),
+                ),
+                onPressed: () {
+                  guardarArticulo();
+                },
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('Guardar'),
+                    SizedBox(
+                      width: 10,
+                    ),
+                    Icon(Icons.create)
+                  ],
                 ),
               ),
             ],

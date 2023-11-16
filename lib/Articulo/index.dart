@@ -125,7 +125,7 @@ class _IndexArticuloState extends State<IndexArticulo> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => CreateArticulo()),
+                  MaterialPageRoute(builder: (context) => HomePage()),
                 );
               },
               child: Text('Crear Artículo'),
